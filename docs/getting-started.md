@@ -1,4 +1,4 @@
----
+
 id: environment-setup
 title: Get Started with React Native
 hide_table_of_contents: true
@@ -47,3 +47,56 @@ npx create-expo-app@latest
 Once you’ve created your app, check out the rest of Expo’s getting started guide to start developing your app.
 
 <BoxLink href="https://docs.expo.dev/get-started/set-up-your-environment">Continue with Expo</BoxLink>
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, Button, FlatList } from 'react-native';
+import io from 'socket.io-client';
+
+const App = () => {
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [socket, setSocket] = useState(null);
+
+  useEffect(() => {
+    // Подключение к серверу
+    const newSocket = io('http://your-server-ip:3000');
+    setSocket(newSocket);
+
+    // Прослушивание входящих сообщений
+    newSocket.on('receive_message', (data) => {
+      setMessages(prevMessages => [...prevMessages, data]);
+    });
+
+    return () => newSocket.close();
+  }, []);
+
+  const sendMessage = () => {
+    if (message.trim() && socket) {
+      socket.emit('send_message', {
+        text: message,
+        id: Date.now(),
+        user: 'CurrentUser' // Замените на систему аутентификации
+      });
+      setMessage('');
+    }
+  };
+
+  return (
+    <View style={{ flex: 1, padding: 20 }}>
+      <FlatList
+        data={messages}
+        keyExtractor={item => item.id.toString()}
+        renderItem={({ item }) => (
+          <Text>{item.user}: {item.text}</Text>
+        )}
+      />
+      <TextInput
+        value={message}
+        onChangeText={setMessage}
+        placeholder="Введите сообщение"
+      />
+      <Button title="Отправить" onPress={sendMessage} />
+    </View>
+  );
+};
+
+export default App;
